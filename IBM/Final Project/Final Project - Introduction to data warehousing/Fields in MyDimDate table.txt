@@ -1,0 +1,165 @@
+Fields in MyDimDate table:
+
+dateid
+year
+month
+monthname
+day
+weekday
+weekdayname
+
+
+Fields in MyDimWaste table:
+wasteid
+wastetype
+
+
+
+Fields in MyDimZone table:
+zoneid
+collectionzone
+
+
+
+Fields in MyFactTrips table:
+tripnumber
+wasteid
+wasteintons
+zoneid
+dateid
+
+
+
+CREATE TABLE MyDimDate (
+    dateid INT PRIMARY KEY,
+    year INT,
+    month INT,
+    monthname VARCHAR(20),
+    day INT,
+    weekday INT,
+    weekdayname VARCHAR(20)
+);
+
+
+CREATE TABLE MyDimWaste (
+    wasteid INT PRIMARY KEY,
+    wastetype VARCHAR(255)
+);
+
+
+CREATE TABLE MyDimZoe (
+    zoneid INT PRIMARY KEY,
+    collectionzone VARCHAR(255)
+);
+
+
+CREATE TABLE MyFactTrips (
+    tripnumber INT PRIMARY KEY,
+    wasteid INT,
+    wasteintons DECIMAL (10, 2),
+    zoneid INT,
+    dateid INT
+);
+
+
+
+
+Final Project
+
+CREATE TABLE public.MyDimDate (
+    dateid INT PRIMARY KEY,
+    date DATE,
+    Year INT,
+    Quarter INT,
+    QuarterName VARCHAR(20),
+    Month INT,
+    Monthname VARCHAR(20),
+    Day INT,
+    Weekday INT,
+    WeekdayName VARCHAR(20)
+);
+
+
+CREATE TABLE public.DimTruck (
+    Truckid INT PRIMARY KEY,
+    TruckType VARCHAR(20)
+);
+
+
+CREATE TABLE public.DimStation (
+    Stationid INT PRIMARY KEY,
+    City VARCHAR(20)
+);
+
+
+CREATE TABLE public.FactTrips (
+    Tripid INT PRIMARY KEY,
+    dateid INT,
+	Stationid INT,
+	Truckid INT,
+	Wastecollected FLOAT
+);
+
+
+
+Select 
+A.Stationid,
+B.TruckType,
+SUM(A.Wastecollected) as total_waste_collected
+From public.FactTrips AS A 
+LEFT JOIN public.DimTruck as B
+ON A.Truckid = B.Truckid
+GROUP BY GROUPING SETS
+(
+    (A.Stationid, B.TruckType),
+    A.Stationid,
+    B.TruckType,
+    ()
+)
+Order by A.Stationid, B.TruckType
+
+
+Select 
+A.Year,
+B.City,
+B.Stationid,
+SUM(C.Wastecollected) as total_waste_collected
+From public.MyDimDate AS A 
+LEFT JOIN public.FactTrips as C
+ON A.dateid = C.dateid
+LEFT JOIN public.DimStation AS B
+ON B.Stationid = C.Stationid
+GROUP BY ROLLUP (A.Year,B.City,B.Stationid)
+ORDER BY A.Year DESC ,B.City,B.Stationid
+
+
+Select 
+A.Year,
+B.City,
+B.Stationid,
+AVG(C.Wastecollected) as average_waste_collected
+From public.MyDimDate AS A 
+INNER JOIN public.FactTrips as C
+ON A.dateid = C.dateid
+INNER JOIN public.DimStation AS B
+ON B.Stationid = C.Stationid
+GROUP BY CUBE (A.Year,B.City,B.Stationid)
+
+
+
+CREATE MATERIALIZED VIEW max_waste_stats AS
+Select 
+A.City,
+A.Stationid,
+B.TruckType,
+MAX(C.Wastecollected) as max_waste_collected
+From public.DimStation AS A 
+LEFT JOIN public.FactTrips as C
+ON A.Stationid = C.Stationid
+LEFT JOIN public.DimTruck AS B
+ON B.Truckid = C.Truckid
+GROUP BY
+A.City,
+A.Stationid,
+B.TruckType
+;
